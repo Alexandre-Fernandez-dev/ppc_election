@@ -27,7 +27,7 @@ class CheckerActor (val id:Int, val terminaux:List[Terminal], electionActor:Acto
 
      var leader : Int = -1
      var ringSuccessor : Int = -1
-    def receive = {
+     def receive = {
 
          // Initialisation²
         case Start => {
@@ -37,42 +37,31 @@ class CheckerActor (val id:Int, val terminaux:List[Terminal], electionActor:Acto
         // A chaque fois qu'on recoit un Beat : on met a jour la liste des nodes
         case IsAlive (nodeId) => {
             mapAlivesDates = mapAlivesDates.updated(nodeId, new Date())
-            println("checker is alive : ")
+            //println("checker is alive : ")
         }
 
         case IsAliveLeader (nodeId) => {
             leader = nodeId
             mapAlivesDates = mapAlivesDates.updated(leader, new Date())
-            println("checker is alive leader : ")
+            //println("checker is alive leader : "
         }
 
         // A chaque fois qu'on recoit un CheckerTick : on verifie qui est mort ou pas
         // Objectif : lancer l'election si le leader est mort
         case CheckerTick => {
             val now = new Date()
-            val deadIds = mapAlivesDates.keySet.filter(k => now.getTime() - mapAlivesDates(k).getTime() <= time);
+            val deadIds = mapAlivesDates.keySet.filter(k => now.getTime() - mapAlivesDates(k).getTime() > time);
             
             mapAlivesDates = mapAlivesDates -- deadIds
 
-            if(!mapAlivesDates.isEmpty && !mapAlivesDates.isDefinedAt(ringSuccessor)){
-                println("successor not defined")
+            val pairs = mapAlivesDates.toSeq
 
-                val maxId = (mapAlivesDates.keySet).fold(-1) {
-                    (z, i) => 
-                        math.max(i, z)
-                }
-                var i = id
-                ringSuccessor = - 1
-                while (ringSuccessor == -1){
-                    println ("looping ring max id : " + i + " max:" + maxId)
-                    if (mapAlivesDates.isDefinedAt( (i + 1) % maxId)){
-                        ringSuccessor = i + 1
-                        println("new ring successor " + ringSuccessor)
-                    }
-                    i = (i + 1) % maxId   
-                }
-                electionActor ! RingNeighbor(ringSuccessor)
-            }
+            var (keys, vals) = pairs.unzip
+            keys = (keys :+ id).sorted
+            println (keys)
+            ringSuccessor = keys((keys.indexOf(id) + 1)%keys.length)
+            println("new ring successor " + ringSuccessor)
+            electionActor ! RingNeighbor(ringSuccessor)
 
             if (!mapAlivesDates.isDefinedAt(leader)) {
                 // TODO start election
