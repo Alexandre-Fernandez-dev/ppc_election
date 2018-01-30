@@ -41,7 +41,7 @@ class BeatActor (val id:Int) extends Actor {
                 father ! BeatLeader (id)
             else
                 father ! Beat (id)
-            system.scheduler.scheduleOnce(time, self, BeatTick)
+            context.system.scheduler.scheduleOnce(time milliseconds, self, BeatTick)
         }
 
         case LeaderChanged (nodeId) => {

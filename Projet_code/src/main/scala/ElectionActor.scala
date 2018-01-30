@@ -2,6 +2,8 @@ package upmc.akka.leader
 
 import akka.actor._
 
+
+
 abstract class NodeStatus
 case class Passive () extends NodeStatus
 case class Candidate () extends NodeStatus
@@ -15,6 +17,9 @@ case class ALG (list:List[Int], nodeId:Int) extends LeaderAlgoMessage
 case class AVS (list:List[Int], nodeId:Int) extends LeaderAlgoMessage
 case class AVSRSP (list:List[Int], nodeId:Int) extends LeaderAlgoMessage
 
+
+
+
 case class StartWithNodeList (list:List[Int])
 
 class ElectionActor (val id:Int, val terminaux:List[Terminal]) extends Actor {
@@ -22,11 +27,17 @@ class ElectionActor (val id:Int, val terminaux:List[Terminal]) extends Actor {
      val father = context.parent
      var nodesAlive:List[Int] = List(id)
 
+
      var candSucc:Int = -1
      var candPred:Int = -1
+     var neighborId: Int = -1
      var status:NodeStatus = new Passive ()
-
      def receive = {
+        
+         case RingNeighbor(nId) => {
+            println ("RingNeighbor" + id + "->" + nId)
+            neighborId = nId
+         }
 
           // Initialisation
           case Start => {

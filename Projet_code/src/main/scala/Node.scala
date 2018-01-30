@@ -3,6 +3,7 @@ package upmc.akka.leader
 import akka.actor._
 
 case class Start ()
+case class RingNeighbor(id: Int)
 
 sealed trait SyncMessage
 case class Sync (nodes:List[Int]) extends SyncMessage
@@ -11,6 +12,7 @@ case class SyncForOneNode (nodeId:Int, nodes:List[Int]) extends SyncMessage
 sealed trait AliveMessage
 case class IsAlive (id:Int) extends AliveMessage
 case class IsAliveLeader (id:Int) extends AliveMessage
+
 
 class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
 
@@ -48,29 +50,29 @@ class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
           case BeatLeader (nodeId) => {
               allNodes.foreach(n => {
                   n ! IsAliveLeader ( nodeId )
-              }
+              })
           }
 
           case Beat (nodeId) => {
               allNodes.foreach(n => {
                   n ! IsAlive ( nodeId )
-              }
+              })
           }
 
           // Messages venant des autres nodes : pour nous dire qui est encore en vie ou mort
           case IsAlive (id) => {
+            //   println ("isAlive " + id )
               checkerActor ! IsAlive (id)
           }
 
           case IsAliveLeader (id) => {
+            //   println ("isAliveLeader " + id )
               checkerActor ! IsAliveLeader (id)
           }
 
           // Message indiquant que le leader a change
           case LeaderChanged (nodeId) => {
-              beat ! LeaderChanged (nodeId)
+              beatActor ! LeaderChanged (nodeId)
           }
-
      }
-
 }
