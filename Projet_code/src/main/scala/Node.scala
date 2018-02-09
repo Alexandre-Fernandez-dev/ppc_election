@@ -13,7 +13,6 @@ sealed trait AliveMessage
 case class IsAlive (id:Int) extends AliveMessage
 case class IsAliveLeader (id:Int) extends AliveMessage
 
-
 class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
 
      // Les differents acteurs du systeme
@@ -25,13 +24,11 @@ class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
      var allNodes:List[ActorSelection] = List()
 
      def receive = {
-
           // Initialisation
           case Start => {
                displayActor ! Message ("Node " + this.id + " is created")
                checkerActor ! Start
                beatActor ! Start
-
                // Initilisation des autres remote, pour communiquer avec eux
                terminaux.foreach(n => {
                     if (n.id != id) {
@@ -49,8 +46,9 @@ class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
 
           case BeatLeader (nodeId) => {
               allNodes.foreach(n => {
-                  n ! IsAliveLeader ( nodeId )
+                  n ! IsAliveLeader (nodeId)
               })
+              checkerActor ! IsAliveLeader (nodeId) // SEND TO ALL OF THE NODES EVEN MYSELF
           }
 
           case Beat (nodeId) => {
@@ -61,18 +59,18 @@ class Node (val id:Int, val terminaux:List[Terminal]) extends Actor {
 
           // Messages venant des autres nodes : pour nous dire qui est encore en vie ou mort
           case IsAlive (id) => {
-            //   println ("isAlive " + id )
               checkerActor ! IsAlive (id)
           }
 
           case IsAliveLeader (id) => {
-            //   println ("isAliveLeader " + id )
               checkerActor ! IsAliveLeader (id)
+
           }
 
           // Message indiquant que le leader a change
           case LeaderChanged (nodeId) => {
               beatActor ! LeaderChanged (nodeId)
+              checkerActor ! LeaderChanged (nodeId)
           }
      }
 }

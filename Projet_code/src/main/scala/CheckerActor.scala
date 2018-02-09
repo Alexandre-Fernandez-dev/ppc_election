@@ -27,11 +27,12 @@ class CheckerActor (val id:Int, val terminaux:List[Terminal], electionActor:Acto
 
      var leader : Int = -1
      var ringSuccessor : Int = -1
+     var isRunningElection = false
      def receive = {
 
          // Initialisation²
         case Start => {
-             self ! CheckerTick
+            context.system.scheduler.scheduleOnce(5*time milliseconds, self, CheckerTick)
         }
 
         // A chaque fois qu'on recoit un Beat : on met a jour la liste des nodes
@@ -41,8 +42,14 @@ class CheckerActor (val id:Int, val terminaux:List[Terminal], electionActor:Acto
         }
 
         case IsAliveLeader (nodeId) => {
-            leader = nodeId
-            mapAlivesDates = mapAlivesDates.updated(leader, new Date())
+            if(nodeId != leader){
+                self ! LeaderChanged (nodeId)
+                leader = nodeId
+            }
+            
+            if (nodeId != id){
+                mapAlivesDates = mapAlivesDates.updated(leader, new Date())
+            }
             //println("checker is alive leader : "
         }
 
@@ -58,16 +65,23 @@ class CheckerActor (val id:Int, val terminaux:List[Terminal], electionActor:Acto
 
             var (keys, vals) = pairs.unzip
             keys = (keys :+ id).sorted
-            println (keys)
+            println ("Virtual ring is : " + keys)
             ringSuccessor = keys((keys.indexOf(id) + 1)%keys.length)
-            println("new ring successor " + ringSuccessor)
+            
             electionActor ! RingNeighbor(ringSuccessor)
 
-            if (!mapAlivesDates.isDefinedAt(leader)) {
-                // TODO start election
-                electionActor ! Start
+            if (!isRunningElection && leader != id && !mapAlivesDates.isDefinedAt(leader)) {
+                isRunningElection = true
+                electionActor ! StartWithNodeList (keys.toList)
             }
             context.system.scheduler.scheduleOnce(time milliseconds, self, CheckerTick)
+        }
+
+        case LeaderChanged (nodeId) =>{
+            println("LEADER CHANGED !!")
+            leader = nodeId
+            isRunningElection = false
+            electionActor ! Reset()
         }
     }
 }
